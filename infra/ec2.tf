@@ -11,7 +11,7 @@ resource "aws_instance" "monitoring_server" {
   user_data = file("install_elk.sh")
 
   root_block_device {
-    volume_size = 20
+    volume_size = 8
   }
 
   tags = {
@@ -20,4 +20,17 @@ resource "aws_instance" "monitoring_server" {
 }
 
 
+resource "aws_ebs_volume" "elastic_data" {
+  availability_zone = aws_instance.monitoring_server.availability_zone
+  size              = 20
+  tags              = { Name = "ElasticData" }
+}
+
+resource "aws_volume_attachment" "ebs_att" {
+  device_name = "/dev/sdh"
+  volume_id   = aws_ebs_volume.elastic_data.id
+  instance_id = aws_instance.monitoring_server.id
+
+  skip_destroy = true
+}
 

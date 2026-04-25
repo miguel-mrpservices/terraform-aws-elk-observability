@@ -4,13 +4,13 @@
 # Setup: Docker & System Deps
 # ---------------------------------------------------------
 
-# Update and get Docker engine
+# update packages and grab docker
 dnf update -y
 dnf install -y docker
 systemctl start docker
 systemctl enable docker
 
-# Fix perms: allow ec2-user to run docker without sudo
+# let ec2-user run docker commands without sudo
 usermod -a -G docker ec2-user
 
 # ---------------------------------------------------------
@@ -20,6 +20,34 @@ DOCKER_CONFIG=${DOCKER_CONFIG:-$HOME/.docker}
 mkdir -p $DOCKER_CONFIG/cli-plugins
 curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 -o /usr/local/bin/docker-compose
 chmod +x /usr/local/bin/docker-compose
+
+# ---------------------------------------------------------
+# EBS Volume Mount (Data Persistence)
+# ---------------------------------------------------------
+# t3 instances usually map the secondary EBS to nvme1n1. finding it dynamically:
+DEVICE="/dev/$(lsblk -no NAME | grep -v "nvme0n1" | grep "nvme" | head -n 1)"
+MOUNT_POINT="/var/lib/elasticsearch_data"
+
+if [ -n "$DEVICE" ]; then
+    # format only if it's raw/empty
+    if [ -z "$(lsblk -fno FSTYPE $DEVICE)" ]; then
+        sudo mkfs -t xfs $DEVICE
+    fi
+    
+    # mount it
+    sudo mkdir -p $MOUNT_POINT
+    sudo mount $DEVICE $MOUNT_POINT
+    
+    # add to fstab so it survives reboots
+    echo "$DEVICE $MOUNT_POINT xfs defaults,nofail 0 2" | sudo tee -a /etc/fstab
+    
+    # elasticsearch container runs as uid 1000, needs ownership of this folder
+    sudo chown -R 1000:1000 $MOUNT_POINT
+else
+    # fallback in case ebs detection fails
+    sudo mkdir -p $MOUNT_POINT
+    sudo chown -R 1000:1000 $MOUNT_POINT
+fi
 
 # ---------------------------------------------------------
 # Workspace & ELK Config
@@ -46,6 +74,8 @@ services:
         hard: -1
     ports:
       - 9200:9200
+    volumes:
+      - $MOUNT_POINT:/usr/share/elasticsearch/data
     networks:
       - elk-network
 
@@ -66,14 +96,22 @@ networks:
     driver: bridge
 EOF
 
-# Ensure perms for ec2-user
+# fix perms for the monitoring folder
 chown -R ec2-user:ec2-user /home/ec2-user/monitoring
 
 # ---------------------------------------------------------
 # Run
 # ---------------------------------------------------------
 
-# Using sudo here because group changes require logout/login to take effect
+# using sudo here because the docker group change requires a re-login to take effect
 sudo /usr/local/bin/docker-compose up -d
+
+# ---------------------------------------------------------
+# Get Elastic Agent (matching ELK version)
+# ---------------------------------------------------------
+cd /home/ec2-user
+curl -L -O https://artifacts.elastic.co/downloads/beats/elastic-agent/elastic-agent-8.12.0-linux-x86_64.tar.gz
+tar xzvf elastic-agent-8.12.0-linux-x86_64.tar.gz
+chown -R ec2-user:ec2-user /home/ec2-user/elastic-agent-8.12.0-linux-x86_64
 
 echo "Wait 2-3 mins for Elastic to be healthy at :5601"
