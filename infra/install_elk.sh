@@ -7,6 +7,8 @@
 # update packages and grab docker
 dnf update -y
 dnf install -y docker
+dnf install -y nmap-ncat
+dnf install -y mariadb105
 systemctl start docker
 systemctl enable docker
 
