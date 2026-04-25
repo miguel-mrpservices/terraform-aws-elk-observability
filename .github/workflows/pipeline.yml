@@ -12,6 +12,8 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_REGION: "eu-central-1" 
       TF_VAR_admin_ip: ${{ secrets.ADMIN_IP }}
+      TF_VAR_db_user: ${{ secrets.DB_USER }}
+      TF_VAR_db_pass: ${{ secrets.DB_PASS }}
 
     steps:
       - name: Checkout Code

@@ -11,7 +11,7 @@ resource "aws_vpc" "main" {
 
 ##---------------------------------------------------##
 
-resource "aws_subnet" "public_subnet" {
+resource "aws_subnet" "public_subnet_1a" {
   vpc_id     = aws_vpc.main.id
   cidr_block = "10.0.1.0/24"
 
@@ -19,7 +19,19 @@ resource "aws_subnet" "public_subnet" {
   availability_zone       = "eu-central-1a"
 
   tags = {
-    Name = "monitoring-public-subnet"
+    Name = "monitoring-public-subnet-1a"
+  }
+}
+
+resource "aws_subnet" "public_subnet_1b" {
+  vpc_id     = aws_vpc.main.id
+  cidr_block = "10.0.2.0/24"
+
+  map_public_ip_on_launch = true
+  availability_zone       = "eu-central-1b"
+
+  tags = {
+    Name = "monitoring-public-subnet-1b"
   }
 }
 
@@ -33,7 +45,7 @@ resource "aws_internet_gateway" "main_igw" {
   }
 }
 
-##---------------------------------------------------##
+##-------------------------Route table linked to both subnets--------------------------##
 
 resource "aws_route_table" "public_rt" {
   vpc_id = aws_vpc.main.id
@@ -49,38 +61,11 @@ resource "aws_route_table" "public_rt" {
 }
 
 resource "aws_route_table_association" "public_assoc" {
-  subnet_id      = aws_subnet.public_subnet.id
+  subnet_id      = aws_subnet.public_subnet_1a.id
   route_table_id = aws_route_table.public_rt.id
 }
 
-##---------------------------------------------------##
-
-resource "aws_security_group" "elk_sg" {
-  name        = "elk-monitoring-sg"
-  description = "Security group for ELK and SSH"
-  vpc_id      = aws_vpc.main.id
-
-  # kibana port
-  ingress {
-    from_port   = 5601
-    to_port     = 5601
-    protocol    = "tcp"
-    cidr_blocks = ["${var.admin_ip}/32"]
-  }
-
-  # SSH
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["${var.admin_ip}/32"]
-  }
-
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+resource "aws_route_table_association" "public_assoc2" {
+  subnet_id      = aws_subnet.public_subnet_1b.id
+  route_table_id = aws_route_table.public_rt.id
 }
