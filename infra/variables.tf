@@ -12,3 +12,13 @@ variable "admin_ip" {
   description = "Public IP for security group whitelisting"
   type        = string
 }
+
+variable "db_user" {
+  description = "default db user"
+  type        = string
+}
+
+variable "db_pass" {
+  description = "default db pass"
+  type        = string
+}
