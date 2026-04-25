@@ -1,21 +1,21 @@
 resource "aws_vpc" "main" {
-  cidr_block           = "10.0.0.0/16"
-  
+  cidr_block = "10.0.0.0/16"
+
   enable_dns_support   = true
   enable_dns_hostnames = true
 
   tags = {
-    Name        = "monitoring-vpc"
+    Name = "monitoring-vpc"
   }
 }
 
 ##---------------------------------------------------##
 
 resource "aws_subnet" "public_subnet" {
-  vpc_id                  = aws_vpc.main.id
-  cidr_block              = "10.0.1.0/24"
-  
-  map_public_ip_on_launch = true 
+  vpc_id     = aws_vpc.main.id
+  cidr_block = "10.0.1.0/24"
+
+  map_public_ip_on_launch = true
   availability_zone       = "eu-central-1a"
 
   tags = {
@@ -65,7 +65,7 @@ resource "aws_security_group" "elk_sg" {
     from_port   = 5601
     to_port     = 5601
     protocol    = "tcp"
-    cidr_blocks = ["${chomp(data.http.my_public_ip.response_body)}/32"] 
+    cidr_blocks = ["${chomp(data.http.my_public_ip.response_body)}/32"]
   }
 
   # SSH
@@ -76,7 +76,7 @@ resource "aws_security_group" "elk_sg" {
     cidr_blocks = ["${chomp(data.http.my_public_ip.response_body)}/32"]
   }
 
-  
+
   egress {
     from_port   = 0
     to_port     = 0
