@@ -65,7 +65,7 @@ resource "aws_security_group" "elk_sg" {
     from_port   = 5601
     to_port     = 5601
     protocol    = "tcp"
-    cidr_blocks = ["${chomp(data.http.my_public_ip.response_body)}/32"]
+    cidr_blocks = ["${var.admin_ip}/32"]
   }
 
   # SSH
@@ -73,7 +73,7 @@ resource "aws_security_group" "elk_sg" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["${chomp(data.http.my_public_ip.response_body)}/32"]
+    cidr_blocks = ["${var.admin_ip}/32"]
   }
 
 
