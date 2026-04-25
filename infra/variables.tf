@@ -7,3 +7,8 @@ variable "tags" {
     ManagedBy   = "terraform"
   }
 }
+
+variable "admin_ip" {
+  description = "Public IP for security group whitelisting"
+  type        = string
+}
