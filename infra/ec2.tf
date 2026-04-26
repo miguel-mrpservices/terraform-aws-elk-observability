@@ -8,7 +8,11 @@ resource "aws_instance" "monitoring_server" {
   key_name                    = "ssh-keygen"
 
 
-  user_data = file("install_elk.sh")
+ user_data = templatefile("userdata.sh", {
+    rds_endpoint = aws_db_instance.mysql_db.address
+    db_user      = var.db_user
+    db_pass      = var.db_pass
+  })
 
   root_block_device {
     volume_size = 8
@@ -17,6 +21,8 @@ resource "aws_instance" "monitoring_server" {
   tags = {
     Name = "ELK-Monitor-Server"
   }
+
+  depends_on = [aws_db_instance.mysql_db]
 }
 
 
