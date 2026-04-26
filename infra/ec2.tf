@@ -26,6 +26,18 @@ resource "aws_instance" "monitoring_server" {
   depends_on = [aws_db_instance.mysql_db]
 }
 
+##---------------------------------------------------##
+
+resource "aws_eip" "monitoring_static_ip" {
+  instance = aws_instance.monitoring_server.id
+  domain   = "vpc"
+
+  tags = {
+    Name = "Elastic-Monitoring-IP"
+  }
+}
+
+##---------------------------------------------------##
 
 resource "aws_ebs_volume" "elastic_data" {
   availability_zone = aws_instance.monitoring_server.availability_zone
