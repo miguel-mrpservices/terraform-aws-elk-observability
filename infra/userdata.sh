@@ -55,7 +55,10 @@ fi
 mkdir -p /home/ec2-user/monitoring
 cd /home/ec2-user/monitoring
 
-# Note: Security (xpack) disabled for PoC speed. 
+
+sudo rm -rf $MOUNT_POINT/*
+
+# Note: Security (xpack) enabled dynamically via Terraform variables
 # Heap limited to 1GB to prevent OOM in t3.medium instances.
 cat <<EOF > docker-compose.yml
 version: '3.8'
@@ -66,7 +69,8 @@ services:
     container_name: elasticsearch
     environment:
       - discovery.type=single-node
-      - xpack.security.enabled=false
+      - xpack.security.enabled=true
+      - ELASTIC_PASSWORD=${elastic_password}
       - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
     ulimits:
       memlock:
@@ -84,6 +88,13 @@ services:
     container_name: kibana
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD=${elastic_password}
+      - XPACK_SECURITY_ENABLED=true
+      - XPACK_FLEET_ENABLED=true
+      - XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6
+      - XPACK_FLEET_ENCRYPTIONKEY=q1w2e3r4t5y6u7i8o9p0a1s2d3f4g5h6
+      - XPACK_REPORTING_ENCRYPTIONKEY=z1x2c3v4b5n6m7l8k9j0h1g2f3d4s5a6
     ports:
       - 5601:5601
     depends_on:
@@ -100,10 +111,26 @@ EOF
 chown -R ec2-user:ec2-user /home/ec2-user/monitoring
 
 # ---------------------------------------------------------
-# Run ELK Stack
+# Run ELK Stack (Secured Bootstrapping Sequence)
 # ---------------------------------------------------------
-# Using sudo here because the docker group change requires a re-login to take effect
-sudo /usr/local/bin/docker-compose up -d
+# Start ONLY Elasticsearch first
+sudo /usr/local/bin/docker-compose up -d elasticsearch
+
+# Wait patiently for the Elasticsearch API to be ready
+echo "Esperando a que Elasticsearch levante..."
+until curl -s -u "elastic:${elastic_password}" http://localhost:9200 | grep -q "cluster_name"; do
+  sleep 5
+done
+
+# Inject the system user's password via the API
+echo "Configurando usuario interno de Kibana..."
+curl -s -X POST -u "elastic:${elastic_password}" \
+  -H "Content-Type: application/json" \
+  "http://localhost:9200/_security/user/kibana_system/_password" \
+  -d "{\"password\":\"${elastic_password}\"}"
+
+# start kibana
+sudo /usr/local/bin/docker-compose up -d kibana
 
 # ---------------------------------------------------------
 # Get Elastic Agent (matching ELK version)
