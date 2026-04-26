@@ -8,7 +8,7 @@ resource "aws_instance" "monitoring_server" {
   key_name                    = "ssh-keygen"
 
 
- user_data = templatefile("userdata.sh", {
+  user_data = templatefile("userdata.sh", {
     rds_endpoint = aws_db_instance.mysql_db.address
     db_user      = var.db_user
     db_pass      = var.db_pass
