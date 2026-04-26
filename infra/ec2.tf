@@ -9,9 +9,10 @@ resource "aws_instance" "monitoring_server" {
 
 
   user_data = templatefile("userdata.sh", {
-    rds_endpoint = aws_db_instance.mysql_db.address
-    db_user      = var.db_user
-    db_pass      = var.db_pass
+    rds_endpoint     = aws_db_instance.mysql_db.address
+    db_user          = var.db_user
+    db_pass          = var.db_pass
+    elastic_password = var.elastic_password
   })
 
   root_block_device {
@@ -37,6 +38,8 @@ resource "aws_volume_attachment" "ebs_att" {
   volume_id   = aws_ebs_volume.elastic_data.id
   instance_id = aws_instance.monitoring_server.id
 
+  force_detach = true
+
 }
 
 ##---------------------------------------------------##
@@ -60,6 +63,16 @@ resource "aws_security_group" "elk_sg" {
     to_port     = 22
     protocol    = "tcp"
     cidr_blocks = ["${var.admin_ip}/32"]
+  }
+
+  # agent connections
+  ingress {
+    description = "Fleet Server"
+    from_port   = 8220
+    to_port     = 8220
+    protocol    = "tcp"
+    cidr_blocks = ["${var.admin_ip}/32"]
+    self        = true
   }
 
 

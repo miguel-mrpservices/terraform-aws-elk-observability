@@ -21,4 +21,11 @@ variable "db_user" {
 variable "db_pass" {
   description = "default db pass"
   type        = string
+  sensitive   = true
+}
+
+variable "elastic_password" {
+  description = "elastic pass"
+  type        = string
+  sensitive   = true
 }
